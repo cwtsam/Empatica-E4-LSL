@@ -7,12 +7,14 @@ acc = True      # 3-axis acceleration
 bvp = True      # Blood Volume Pulse
 gsr = True      # Galvanic Skin Response (Electrodermal Activity)
 tmp = True      # Temperature
+ibi = True     # Interbeat interval
+
 
 serverAddress = '127.0.0.1'
 serverPort = 28000
 bufferSize = 4096
 
-deviceID = '1451CD' # 'A02088'
+deviceID = '8E2B64' # 'A02088'
 
 def connect():
     global s
@@ -62,6 +64,11 @@ def suscribe_to_data():
         s.send(("device_subscribe " + 'tmp' + " ON\r\n").encode())
         response = s.recv(bufferSize)
         print(response.decode("utf-8"))
+    if ibi:
+        print("Suscribing to IBI")
+        s.send(("device_subscribe " + 'ibi' + " ON\r\n").encode())
+        response = s.recv(bufferSize)
+        print(response.decode("utf-8"))
 
     print("Resuming data receiving")
     s.send("pause OFF\r\n".encode())
@@ -87,6 +94,10 @@ def prepare_LSL_streaming():
         infoTemp = pylsl.StreamInfo('tmp','Temp',1,4,'float32','Temp-empatica_e4');
         global outletTemp
         outletTemp = pylsl.StreamOutlet(infoTemp)
+    if ibi:
+        infoIBI = pylsl.StreamInfo('ibi','IBI',1,4,'float32','IBI-empatica_e4');
+        global outletIBI
+        outletIBI = pylsl.StreamOutlet(infoIBI)
 prepare_LSL_streaming()
 
 time.sleep(1)
@@ -127,6 +138,10 @@ def stream():
                         timestamp = float(samples[i].split()[1].replace(',','.'))
                         data = float(samples[i].split()[2].replace(',','.'))
                         outletTemp.push_sample([data], timestamp=timestamp)
+                    if stream_type == "E4_Ibi":
+                        timestamp = float(samples[i].split()[1].replace(',','.'))
+                        data = float(samples[i].split()[2].replace(',','.'))
+                        outletIBI.push_sample([data], timestamp=timestamp)
                 #time.sleep(1)
             except socket.timeout:
                 print("Socket timeout")
